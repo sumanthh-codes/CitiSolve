@@ -1,0 +1,18 @@
+# ESSENTIAL - Must ignore these
+node_modules/
+.env
+Backendfiles/.env
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
