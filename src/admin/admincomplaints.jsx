@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styles from './admincomplaintsstyles.module.css'; // Corrected import
+import styles from './admincomplaintsstyles.module.css';
 
 const ComplaintsPage = () => {
   const [complaints, setComplaints] = useState([]);
@@ -15,7 +15,6 @@ const ComplaintsPage = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showImageViewer, setShowImageViewer] = useState(false);
 
-  // Edit form state
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -23,7 +22,6 @@ const ComplaintsPage = () => {
     priority: '',
   });
 
-  // Fetch all complaints on initial load
   useEffect(() => {
     const fetchInitialComplaints = async () => {
       setLoading(true);
@@ -55,25 +53,117 @@ const ComplaintsPage = () => {
     setSearchTerm(e.target.value);
   };
 
+  // Enhanced search function that searches through ALL fields
   const getFilteredComplaints = () => {
     return complaints.filter((c) => {
       const statusMatch = filters.status === 'all' || c.status === filters.status;
       const categoryMatch = filters.category === 'all' || c.category === filters.category;
       const priorityMatch = filters.priority === 'all' || c.priority === filters.priority;
 
-      // Enhanced search across multiple fields
+      if (searchTerm === '') {
+        return statusMatch && categoryMatch && priorityMatch;
+      }
+
       const searchLower = searchTerm.toLowerCase();
-      const searchMatch =
-        searchTerm === '' ||
-        (c.id && c.id.toString().includes(searchLower)) ||
-        (c.user_id && c.user_id.toLowerCase().includes(searchLower)) ||
-        (c.user_email && c.user_email.toLowerCase().includes(searchLower)) ||
-        (c.title && c.title.toLowerCase().includes(searchLower)) ||
-        (c.location && c.location.toLowerCase().includes(searchLower)) ||
-        (c.category && c.category.toLowerCase().includes(searchLower));
+      
+      // Convert all complaint fields to searchable strings
+      const searchableFields = [
+        c.id?.toString(),
+        c.user_id?.toString(),
+        c.user_email?.toString(),
+        c.title?.toString(),
+        c.description?.toString(),
+        c.category?.toString(),
+        c.location?.toString(),
+        c.priority?.toString(),
+        c.status?.toString(),
+        c.created_at ? new Date(c.created_at).toLocaleString() : '',
+        c.resolved_on ? new Date(c.resolved_on).toLocaleString() : '',
+        c.resolvedby_name?.toString(),
+        c.resolvedby_id?.toString(),
+      ];
+
+      // Check if search term exists in any field
+      const searchMatch = searchableFields.some(field => 
+        field && field.toLowerCase().includes(searchLower)
+      );
 
       return statusMatch && categoryMatch && priorityMatch && searchMatch;
     });
+  };
+
+  // CSV Export Function
+  const handleExportCSV = () => {
+    const filteredComplaints = getFilteredComplaints();
+    
+    if (filteredComplaints.length === 0) {
+      alert('No complaints to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'ID',
+      'User ID',
+      'User Email',
+      'Title',
+      'Description',
+      'Category',
+      'Location',
+      'Priority',
+      'Status',
+      'Created At',
+      'Resolved On',
+      'Resolved By Name',
+      'Resolved By ID',
+      'Image URL'
+    ];
+
+    // Convert complaints to CSV rows
+    const csvRows = [
+      headers.join(','), // Header row
+      ...filteredComplaints.map(c => {
+        // Correctly format the date-time strings and escape quotes for all fields
+        const formattedCreatedAt = c.created_at ? `"${new Date(c.created_at).toLocaleString().replace(/"/g, '""')}"` : '""';
+        const formattedResolvedOn = c.resolved_on ? `"${new Date(c.resolved_on).toLocaleString().replace(/"/g, '""')}"` : '""';
+
+        const row = [
+          `"${c.id || ''}"`,
+          `"${c.user_id || ''}"`,
+          `"${c.user_email || ''}"`,
+          `"${(c.title || '').replace(/"/g, '""')}"`,
+          `"${(c.description || '').replace(/"/g, '""')}"`,
+          `"${c.category || ''}"`,
+          `"${(c.location || '').replace(/"/g, '""')}"`,
+          `"${c.priority || ''}"`,
+          `"${c.status || ''}"`,
+          formattedCreatedAt,
+          formattedResolvedOn,
+          `"${c.resolvedby_name || ''}"`,
+          `"${c.resolvedby_id || ''}"`,
+          `"${c.imageurl || ''}"`
+        ];
+        return row.join(',');
+      })
+    ];
+
+    // Create CSV content
+    const csvContent = csvRows.join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `complaints_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
   };
 
   const handleViewDetails = (complaint) => {
@@ -82,7 +172,6 @@ const ComplaintsPage = () => {
   };
 
   const handleEditClick = (complaint) => {
-    // Check if complaint is resolved
     if (complaint.status === 'resolved') {
       alert('Cannot edit a resolved complaint');
       return;
@@ -99,21 +188,26 @@ const ComplaintsPage = () => {
   };
 
   const handleDeleteClick = async(complaint) => {
-    // You'll implement the backend call here
     if (window.confirm(`Are you sure you want to delete complaint #${complaint.id}?`)) {
       console.log('Delete complaint:', complaint.id);
-      const res = await fetch(`http://localhost:5000/api/auth/complaints/delete`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: complaint.id }),    
-        credentials: 'include',
-      });
-      const data = await res.json();
+      try {
+        const res = await fetch(`http://localhost:5000/api/auth/complaints/delete`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: complaint.id }),    
+          credentials: 'include',
+        });
+        const data = await res.json();
         if (res.ok) {
-            // Remove from local state
-            setComplaints(complaints.filter((c) => c.id !== complaint.id));
-            alert('Complaint deleted successfully');
+          setComplaints(complaints.filter((c) => c.id !== complaint.id));
+          alert('Complaint deleted successfully');
+        } else {
+          alert('Failed to delete complaint: ' + (data.error || 'Unknown error'));
         }
+      } catch (error) {
+        console.error('Error deleting complaint:', error);
+        alert('Error deleting complaint');
+      }
     }
   };
 
@@ -134,30 +228,34 @@ const ComplaintsPage = () => {
   };
 
   const handleEditSubmit = async() => {
-    // You'll implement the backend call here
     console.log('Submitting edit for complaint:', selectedComplaint.id);
-    const res = await fetch(`http://localhost:5000/api/auth/admin/complaints/edit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({editForm:editForm,  id: selectedComplaint.id}),
-      credentials: 'include',
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      alert('Failed to update complaint: ' + (data.error || 'Unknown error'));
-      return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/auth/admin/complaints/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({editForm:editForm,  id: selectedComplaint.id}),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert('Failed to update complaint: ' + (data.error || 'Unknown error'));
+        return;
+      }
+
+      setComplaints(
+        complaints.map((c) =>
+          c.id === selectedComplaint.id
+            ? { ...c, ...editForm }
+            : c
+        )
+      );
+
+      setShowEditModal(false);
+      alert('Complaint updated successfully');
+    } catch (error) {
+      console.error('Error updating complaint:', error);
+      alert('Error updating complaint');
     }
-
-    // Update local state
-    setComplaints(
-      complaints.map((c) =>
-        c.id === selectedComplaint.id
-          ? { ...c, ...editForm }
-          : c
-      )
-    );
-
-    setShowEditModal(false);
   };
 
   const handleImageClick = () => {
@@ -171,7 +269,6 @@ const ComplaintsPage = () => {
     if (status === 'pending') badgeClass = 'badgePending';
     else if (status === 'progress') badgeClass = 'badgeProgress';
     else if (status === 'resolved') badgeClass = 'badgeResolved';
-    // Using bracket notation for class with hyphen
     return <span className={`${styles.badge} ${styles[badgeClass]}`}>{statusText}</span>;
   };
 
@@ -181,7 +278,6 @@ const ComplaintsPage = () => {
     if (priority === 'high') badgeClass = 'badgeHigh';
     else if (priority === 'medium') badgeClass = 'badgeMedium';
     else if (priority === 'low') badgeClass = 'badgeLow';
-    // Using bracket notation for class with hyphen
     return <span className={`${styles.badge} ${styles[badgeClass]}`}>{priority.toUpperCase()}</span>;
   };
 
@@ -255,7 +351,7 @@ const ComplaintsPage = () => {
       <div className={styles.pageHeader}>
         <h2>All Complaints</h2>
         <div className={styles.pageActions}>
-          <button className={styles.btnPrimary}>📥 Export CSV</button>
+          <button className={styles.btnPrimary} onClick={handleExportCSV}>📥 Export CSV</button>
           <button
             className={styles.btnSecondary}
             onClick={() => {
@@ -302,7 +398,7 @@ const ComplaintsPage = () => {
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="🔍 Search by ID, User ID, Email, Title, Location..."
+            placeholder="🔍 Search across all fields..."
             value={searchTerm}
             onChange={handleSearchChange}
           />
@@ -462,7 +558,7 @@ const ComplaintsPage = () => {
                 <button className={styles.btnSecondary} onClick={() => setShowEditModal(false)}>
                   Cancel
                 </button>
-                <button type = "submit" className={styles.btnPrimary} onClick={handleEditSubmit}>
+                <button type="submit" className={styles.btnPrimary} onClick={handleEditSubmit}>
                   Save Changes
                 </button>
               </div>

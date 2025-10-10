@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, NavLink } from 'react-router-dom';
+import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import DashboardPage from './adminhome';
 import UsersPage from './adminusers';
 import ComplaintsPage from './admincomplaints';
+import DepartmentsPage from './admindepartments';
+import StaffPage from './adminstaff';
 import styles from './adminlayout.module.css';
 import { useNavigate } from 'react-router-dom';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const location = useLocation();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => window.innerWidth <= 768);
   const [user, setUser] = useState({ name: "Admin User", role: "Super Admin" });
   const [loading, setLoading] = useState(true);
+  const [pageTitle, setPageTitle] = useState('Dashboard');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,6 +41,34 @@ const AdminLayout = () => {
 
     fetchUser();
   }, [navigate]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidebarCollapsed(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = 'Dashboard';
+    if (path === '/admin/complaints') {
+      title = 'Complaints';
+    } else if (path === '/admin/users') {
+      title = 'Users';
+    } else if (path === '/admin/departments') {
+      title = 'Departments';
+    } else if (path === '/admin/staff') {
+      title = 'Staff Management';
+    } else if (path === '/admin/home' || path === '/admin/') {
+      title = 'Dashboard';
+    }
+    setPageTitle(title);
+  }, [location.pathname]);
 
   const handleMenuToggle = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -82,19 +114,19 @@ const AdminLayout = () => {
           <p className={styles.adminBadge}>ADMIN PORTAL</p>
         </div>
         <nav className={styles.sidebarNav}>
-          <NavLink to="/admin/home" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/home" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>📊</span><span className={styles.navText}>Dashboard</span>
           </NavLink>
-          <NavLink to="/admin/complaints" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/complaints" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>📋</span><span className={styles.navText}>Complaints</span>
           </NavLink>
-          <NavLink to="/admin/users" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/users" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>👥</span><span className={styles.navText}>Users</span>
           </NavLink>
-          <NavLink to="/admin/departments" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/departments" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>🏢</span><span className={styles.navText}>Departments</span>
           </NavLink>
-          <NavLink to="/admin/staff" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/staff" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>👔</span><span className={styles.navText}>Staff Management</span>
           </NavLink>
         </nav>
@@ -114,15 +146,17 @@ const AdminLayout = () => {
           </button>
         </div>
       </div>
-
+      {isSidebarCollapsed && window.innerWidth <= 768 && <div className={styles.overlay} onClick={() => setIsSidebarCollapsed(true)} />}
       {/* === Main Content Area === */}
       <div className={`${styles.mainContent} ${isSidebarCollapsed ? styles.expanded : ''}`}>
         {/* === Navbar === */}
         <div className={styles.topbar}>
-          <button className={styles.menuToggle} onClick={handleMenuToggle}>
-            ☰
-          </button>
-          <h1 className={styles.pageTitle}>Dashboard</h1>
+          <div className={styles.topbarLeft}>
+             <button className={styles.menuToggle} onClick={handleMenuToggle}>
+              ☰
+            </button>
+          </div>
+          <h1 className={styles.pageTitle}>{pageTitle}</h1>
           <div className={styles.topbarRight}>
             <button className={styles.notificationBtn}>
               🔔<span className={styles.notificationBadge}>5</span>
@@ -135,6 +169,8 @@ const AdminLayout = () => {
           <Route path="/home" element={<DashboardPage />} />
           <Route path="/complaints" element={<ComplaintsPage />}/>
           <Route path="/users" element={<UsersPage />}/>
+          <Route path="/departments" element={<DepartmentsPage />}/>
+          <Route path="/staff" element={<StaffPage />}/>
         </Routes>
       </div>
     </div>

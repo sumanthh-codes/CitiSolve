@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Chart from 'chart.js/auto';
-import styles from './adminlayout.module.css';
+import styles from './adminhomestyle.module.css'; // Updated import to the new CSS file
 import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {

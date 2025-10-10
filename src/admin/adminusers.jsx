@@ -52,18 +52,36 @@ const UsersPage = () => {
     setSearchTerm(e.target.value);
   };
 
+  // Enhanced search function that searches ALL fields
   const getFilteredUsers = () => {
     return usersData.filter((user) => {
-      // Use user.role instead of user.type for filtering
+      // Role/type filter
       const typeMatch = filters.role === 'all' || user.role === filters.role;
+      
+      // Comprehensive search across all fields
+      if (searchTerm === '') {
+        return typeMatch;
+      }
+
       const searchLower = searchTerm.toLowerCase();
-      const searchMatch =
-        searchTerm === '' ||
-        (user.fullname && user.fullname.toLowerCase().includes(searchLower)) ||
-        (user.email && user.email.toLowerCase().includes(searchLower)) ||
-        (user.ward && user.ward.toLowerCase().includes(searchLower)) ||
-        (user.department && user.department.toLowerCase().includes(searchLower)) ||
-        (user.id && user.id.toLowerCase().includes(searchLower));
+      
+      // Convert all user fields to searchable strings
+      const searchableFields = [
+        user.id,
+        user.fullname,
+        user.email,
+        user.role,
+        user.ward,
+        user.department,
+        user.created_at ? new Date(user.created_at).toLocaleDateString() : '',
+        user.created_at ? new Date(user.created_at).toLocaleString() : '',
+      ];
+
+      // Check if search term exists in any field
+      const searchMatch = searchableFields.some(field => 
+        field && field.toString().toLowerCase().includes(searchLower)
+      );
+
       return typeMatch && searchMatch;
     });
   };
@@ -124,44 +142,6 @@ const UsersPage = () => {
     setEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleEditSubmit = async () => {
-    try {
-      const { password, ...formData } = editForm;
-      const res = await fetch(`http://localhost:5000/api/auth/admin/users/edit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: selectedUser.id,
-          ...formData,
-        }),
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert('Failed to update user: ' + (data.error || 'Unknown error'));
-        return;
-      }
-      setUsersData(
-        usersData.map((u) =>
-          u.id === selectedUser.id
-            ? {
-                ...u,
-                fullname: editForm.name,
-                email: editForm.email,
-                role: editForm.role,
-                ward: editForm.role === 'citizen' ? editForm.wardOrDept : u.ward,
-                department: editForm.role === 'staff' ? editForm.wardOrDept : u.department,
-              }
-            : u
-        )
-      );
-      setShowEditModal(false);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      alert('An error occurred while updating the user.');
-    }
-  };
-
   const handleAddUser = () => {
     setSelectedUser(null);
     setEditForm({
@@ -193,6 +173,50 @@ const UsersPage = () => {
       console.error('Error adding user:', error);
       alert('An error occurred while adding the user.');
     }
+  };
+
+  // CSV Export function
+  const handleExportCSV = () => {
+    const filteredUsers = getFilteredUsers();
+    
+    if (filteredUsers.length === 0) {
+      alert('No users to export');
+      return;
+    }
+
+    // CSV Headers
+    const headers = ['ID', 'Name', 'Email', 'Type', 'Ward/Department', 'Joined Date'];
+    
+    // Convert users to CSV rows
+    const csvRows = filteredUsers.map(user => [
+      user.id || '',
+      user.fullname || '',
+      user.email || '',
+      user.role || '',
+      user.ward || user.department || '',
+      user.created_at ? new Date(user.created_at).toLocaleString() : ''
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => 
+        row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')
+      )
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const renderTableBody = () => {
@@ -240,9 +264,6 @@ const UsersPage = () => {
             <button className={`${styles.actionBtn} ${styles.view}`} title="View Details" onClick={() => handleViewDetails(user)}>
               👁️
             </button>
-            <button className={`${styles.actionBtn} ${styles.edit}`} title="Edit" onClick={() => handleEditClick(user)}>
-              ✏️
-            </button>
             <button className={`${styles.actionBtn} ${styles.delete}`} title="Delete" onClick={() => handleDeleteClick(user)}>
               🗑️
             </button>
@@ -257,10 +278,7 @@ const UsersPage = () => {
       <div className={styles.pageHeader}>
         <h2>All Users</h2>
         <div className={styles.pageActions}>
-          <button className={styles.btnPrimary} onClick={handleAddUser}>
-            ➕ Add User
-          </button>
-          <button className={styles.btnSecondary}>📥 Export CSV</button>
+          <button className={styles.btnSecondary} onClick={handleExportCSV}>📥 Export CSV</button>
         </div>
       </div>
 
@@ -342,92 +360,6 @@ const UsersPage = () => {
           </div>
         </div>
       )}
-
-      {showEditModal && (
-        <div className={styles.modalBackdrop} onClick={() => setShowEditModal(false)}>
-          <div className={`${styles.modalContent} ${styles.editModal}`} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>{selectedUser ? `Edit User: ${selectedUser.fullname}` : 'Add New User'}</h3>
-              <button className={styles.closeBtn} onClick={() => setShowEditModal(false)}>
-                ×
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label htmlFor="name">Full Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  className={styles.formInput}
-                  value={editForm.name}
-                  onChange={onFormChange}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  className={styles.formInput}
-                  value={editForm.email}
-                  onChange={onFormChange}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="role">User Type</label>
-                <select id="role" name="role" className={styles.formSelect} value={editForm.role} onChange={onFormChange}>
-                  <option value="citizen">Citizen</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-
-              {(editForm.role === 'citizen' || editForm.role === 'staff') && (
-                <div className={styles.formGroup}>
-                  <label htmlFor="wardOrDept">
-                    {editForm.role === 'citizen' ? 'Ward' : 'Department'}
-                  </label>
-                  <input
-                    type="text"
-                    id="wardOrDept"
-                    name="wardOrDept"
-                    className={styles.formInput}
-                    value={editForm.wardOrDept}
-                    onChange={onFormChange}
-                  />
-                </div>
-              )}
-
-              {!selectedUser && (
-                <div className={styles.formGroup}>
-                  <label htmlFor="password">Password</label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    className={styles.formInput}
-                    onChange={onFormChange}
-                  />
-                </div>
-              )}
-
-              <div className={styles.modalActions}>
-                <button className={styles.btnSecondary} onClick={() => setShowEditModal(false)}>
-                  Cancel
-                </button>
-                <button className={styles.btnPrimary} onClick={selectedUser ? handleEditSubmit : handleAddSubmit}>
-                  {selectedUser ? 'Save Changes' : 'Add User'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showConfirmModal && selectedUser && (
         <div className={styles.modalBackdrop} onClick={() => setShowConfirmModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
