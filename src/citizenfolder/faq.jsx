@@ -130,7 +130,9 @@ const FAQ = () => {
           <p><strong>Name: </strong>{user.fullname}</p>
           <p><strong>Email: </strong>{user.email}</p>
           <p><strong>Ward: </strong>{user.ward}</p>
-          <p><a href="#">Settings</a> | <a href="#" onClick={handleLogout}>Logout</a></p>
+          <p><div className={styles.logout} onClick={handleLogout}>
+                        Logout
+                      </div></p>
         </div>
       </div>
 

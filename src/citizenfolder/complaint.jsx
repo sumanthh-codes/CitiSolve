@@ -224,8 +224,7 @@ const Complaint = () => {
         </div>
         <div className={styles.profiledropdown}>
           <p>
-            <strong>Name: </strong>
-            {user.fullname}
+            <strong>{user.fullname}</strong>            
           </p>
           <p>
             <strong>Email: </strong>
@@ -236,10 +235,9 @@ const Complaint = () => {
             {user.ward}
           </p>
           <p>
-            <a href="#">Settings</a> |{" "}
-            <a href="#" onClick={handleLogout}>
+            <div className={styles.logout} onClick={handleLogout}>
               Logout
-            </a>
+            </div>
           </p>
         </div>
       </div>

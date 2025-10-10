@@ -188,8 +188,9 @@
   background: white;
   color: #283618;
   padding: 20px;
+  font-size: smaller;
   border-radius: 16px;
-  width: 240px;
+  width: 380px;
   max-width: calc(100vw - 40px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -905,4 +906,20 @@ input[type="file"] {
   .navlink:active {
     background: rgba(96, 108, 56, 0.5);
   }
+}
+
+.logout {
+  background-image: linear-gradient(135deg, #dda15e 0%, #bc6c25 100%);
+  cursor: pointer;
+  font-weight: 500;
+  width: max-content;
+  height: max-content;
+  border-radius: 5px;
+  padding:7px 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+.logout:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 32px rgba(221, 161, 94, 0.5);
 }
