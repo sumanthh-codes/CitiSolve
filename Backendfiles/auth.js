@@ -17,9 +17,7 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ==================== Authentication Routes ====================
-
-// SIGNUP - Supabase version
+// SIGNUP 
 router.post("/signup", async (req, res) => {
   const { fullname, email, password, ward_department, role } = req.body;
 
@@ -104,7 +102,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// LOGIN - Supabase version
+// LOGIN 
 router.post("/login", async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -297,7 +295,6 @@ router.get("/complaints", isAuthenticated, async (req, res) => {
   console.log("📋 Fetching complaints for user:", userId);
 
   try {
-    // Build query based on role
     let query = supabase
       .from('complaints')
       .select('*')
@@ -359,12 +356,10 @@ router.post("/complaints/delete", isAuthenticated, async (req, res) => {
 
       if (userFetchError) {
         console.error("❌ Error fetching resolver user:", userFetchError);
-        // Continue with deletion even if we can't update the count
       } else {
         const currentResolved = resolverUser.resolved || 0;
-        const newResolvedCount = Math.max(0, currentResolved - 1); // Ensure it doesn't go below 0
+        const newResolvedCount = Math.max(0, currentResolved - 1); 
 
-        // Decrement the resolved count
         const { error: updateError } = await supabase
           .from('users')
           .update({ resolved: newResolvedCount })
@@ -372,7 +367,6 @@ router.post("/complaints/delete", isAuthenticated, async (req, res) => {
 
         if (updateError) {
           console.error("❌ Error updating resolver's resolved count:", updateError);
-          // Continue with deletion even if count update fails
         } else {
           console.log(`✅ Decremented resolved count for user ${resolverUserId}: ${currentResolved} -> ${newResolvedCount}`);
         }
@@ -403,7 +397,6 @@ router.get("/complaints/data", isAuthenticated, async (req, res)=>{
   const userId = req.session.userId;
   console.log("📋 Fetching complaints data for user:", userId);
   try {
-    // Build query based on role
     const { data: total1, error: checkError } = await supabase
       .from('complaints')
       .select('*')
@@ -489,14 +482,10 @@ router.get("/staff/complaints", isAuthenticated, async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch user info" });
     }
 
-    // Build query based on role
     let query = supabase.from('complaints').select('*');
-    
-    // If not admin, filter by department
     
     query = query.eq('category', user.department);
 
-    // Sort by date (newest first)
     query = query.order('created_at', { ascending: false });
 
     // Execute the query
@@ -510,7 +499,6 @@ router.get("/staff/complaints", isAuthenticated, async (req, res) => {
     const pending = complaints.filter(c => c.status === 'pending').length;
     const resolved = complaints.filter(c => c.status === 'resolved').length;
     const inprogress = complaints.filter(c => c.status === 'progress').length;
-    // Format the data to match frontend expectations
     const formattedComplaints = complaints.map(c => ({
       id: c.id,
       title: c.title,
@@ -763,7 +751,7 @@ router.post("/admin/complaints/edit", isAuthenticated, async (req, res) => {
     if (status === 'resolved') {
       // Fetch current user data
       const { data: userData, error: fetchError } = await supabase
-        .from('users') // Replace with your actual users table name
+        .from('users') 
         .select('resolved')
         .eq('id', req.session.userId)
         .single();
@@ -813,45 +801,12 @@ router.post("/admin/users/delete", isAuthenticated, async (req, res) => {
   }
 })
 
-router.post("/admin/users/edit", isAuthenticated, async (req, res) => {
-  const userid = req.body.id;
-  const editform = req.body.editForm;
-  if (!userid || !editform) {
-    return res.status(400).json({ message: "Missing user ID or edit data" });
-  }
-  const roleOptions = ['citizen', 'staff'];
-  const role = editform.role;
-  if (!roleOptions.includes(role)) {
-    return res.status(400).json({ message: "Invalid role value" });}
-  try {
-    // Fetch the complaint by ID
-    const { data: user, error } = await supabase
-      .from('users')
-      .update(editform)
-      .eq('id', userid)
-      .select()
-      .single();
-    if (error) {
-      console.error("❌ Fetch error:", error);
-      return res.status(500).json({ message: "Error fetching user" });
-    }
-    res.status(200).json({ user });
-} catch (err) {
-    console.error("❌ Fetch user x:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-})
-
-// Backend code (Node.js/Express route handler)
-// This should be placed in your auth.js or main server file (e.g., index.js) as a router.get
-// Assuming you have supabase client, isAuthenticated middleware, and express router setup
 
 router.get("/admin/departments", isAuthenticated, async (req, res) => {
   try {
     const departments = ['roads', 'water', 'power', 'sanitation', 'other'];
     const departmentStats = {};
 
-    // Fetch all complaints and staff users in a single query
     const { data: allComplaints, error: complaintsError } = await supabase
       .from('complaints')
       .select('*');
@@ -974,35 +929,5 @@ router.get("/admin/staff", isAuthenticated, async (req, res) => {
     res.status(500).json({ error: "Server error fetching staff members" });
   }
 });
-
-router.post("/user/edit", isAuthenticated, async (req, res) => {
-  const { fullname,ward,password} = req.body;
-  const userId = req.session.userId;
-
-  if (!fullname || !ward) {
-    return res.status(400).json({ message: "Fullname and ward are required" });
-  }
-  try {
-    const updateData = { fullname, ward };
-
-    if (password) {
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-      updateData.password = hashedPassword;
-    }
-    // Update the user
-    const { data: updatedUser, error: updateError } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', userId)
-      .select()
-      .single();
-  }
-  catch (err) {
-    console.error("❌ Update user error:", err);
-    return res.status(500).json({ message: "Server error updating profile" });
-  }
-})
-
 
 export default router;
