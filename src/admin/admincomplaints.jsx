@@ -16,10 +16,7 @@ const ComplaintsPage = () => {
   const [showImageViewer, setShowImageViewer] = useState(false);
 
   const [editForm, setEditForm] = useState({
-    title: '',
-    description: '',
-    status: '',
-    priority: '',
+    status:''
   });
 
   useEffect(() => {
@@ -179,10 +176,7 @@ const ComplaintsPage = () => {
 
     setSelectedComplaint(complaint);
     setEditForm({
-      title: complaint.title || '',
-      description: complaint.description || '',
       status: complaint.status || '',
-      priority: complaint.priority || '',
     });
     setShowEditModal(true);
   };
@@ -211,21 +205,13 @@ const ComplaintsPage = () => {
     }
   };
 
-  const onTitleChange = (e) => {
-    setEditForm((prev) => ({ ...prev, title: e.target.value }));
-  };
 
-  const onDescriptionChange = (e) => {
-    setEditForm((prev) => ({ ...prev, description: e.target.value }));
-  };
 
   const onStatusChange = (e) => {
     setEditForm((prev) => ({ ...prev, status: e.target.value }));
   };
 
-  const onPriorityChange = (e) => {
-    setEditForm((prev) => ({ ...prev, priority: e.target.value }));
-  };
+
 
   const handleEditSubmit = async() => {
     console.log('Submitting edit for complaint:', selectedComplaint.id);
@@ -507,32 +493,7 @@ const ComplaintsPage = () => {
               <button className={styles.closeBtn} onClick={() => setShowEditModal(false)}>
                 ×
               </button>
-            </div>
-            <div className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label htmlFor="editTitle">Title</label>
-                <input
-                  type="text"
-                  id="editTitle"
-                  className={styles.formInput}
-                  value={editForm.title}
-                  onChange={onTitleChange}
-                  placeholder="Enter complaint title"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="editDescription">Description</label>
-                <textarea
-                  id="editDescription"
-                  className={styles.formTextarea}
-                  value={editForm.description}
-                  onChange={onDescriptionChange}
-                  placeholder="Enter complaint description"
-                  rows="5"
-                  maxLength={500}
-                />
-              </div>
+            </div >
 
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
@@ -543,16 +504,6 @@ const ComplaintsPage = () => {
                     <option value="resolved">Resolved</option>
                   </select>
                 </div>
-
-                <div className={styles.formGroup}>
-                  <label htmlFor="editPriority">Priority</label>
-                  <select id="editPriority" className={styles.formSelect} value={editForm.priority} onChange={onPriorityChange}>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-              </div>
 
               <div className={styles.modalActions}>
                 <button className={styles.btnSecondary} onClick={() => setShowEditModal(false)}>
