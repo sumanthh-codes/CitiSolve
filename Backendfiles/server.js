@@ -1,9 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import { config } from './config/config.js';
 import session from 'express-session';
-import authRoutes from './auth.js';
+import authRoutes from './routes/authroutes.js';
 import dotenv from 'dotenv';
+import citizenroutes from './routes/citizenroutes.js'
+import staffroutes from './routes/staffroutes.js'
+import adminroutes from './routes/adminroutes.js'
 
 dotenv.config();
 
@@ -23,7 +27,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Session middleware - MUST be before routes
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'citisolve-secret-key-change-in-production',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -43,6 +47,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth',citizenroutes);
+app.use('/api/auth',staffroutes);
+app.use('/api/auth',adminroutes);
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -62,7 +69,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = 5000;
+const PORT = config.port;
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log('✅ Test the server: http://localhost:5000/api/test');
