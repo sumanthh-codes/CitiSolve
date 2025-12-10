@@ -66,7 +66,7 @@ const FaqStaff = () => {
 
         if (res.ok) {
           const data = await res.json();
-          setUser(data.user);
+          setUser(data);
         } else {
           navigate('/');
         }

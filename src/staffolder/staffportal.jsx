@@ -47,8 +47,8 @@ const StaffPortal = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          console.log('✅ User data fetched:', data.user);
-          setUser(data.user);
+          console.log('✅ User data fetched:', data);
+          setUser(data);
         } else {
           console.log('❌ User not authenticated');
           navigate('/');

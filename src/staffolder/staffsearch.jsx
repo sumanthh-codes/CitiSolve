@@ -85,7 +85,7 @@ const SearchStaff = () => {
 
         if (resUser.ok) {
           const userData = await resUser.json();
-          setUser(userData.user);
+          setUser(userData);
           await fetchComplaints();
         } else {
           navigate('/');
