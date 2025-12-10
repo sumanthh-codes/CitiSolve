@@ -19,6 +19,33 @@
   background: transparent;
 }
 
+.contentxyz{
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, 50px); /* 6 equal boxes */
+  gap: 10px; /* spacing between inputs */
+  justify-content: center; /* center horizontally */
+  margin-top: 0px;
+}
+
+.otpname{
+  display: flex;
+  font-size: 18px;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+.contentxyz input{
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  font-size: 24px;
+  border: 2px solid #e0d5b7;
+  border-radius: 12px;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: 300;
+  transition: all 0.3s ease;
+}
+
 .formgroup {
   margin-bottom: 24px;
 }
@@ -887,6 +914,17 @@
     padding: 10px 20px;
     font-size: 14px;
   }
+  .contentxyz input{
+    width: 40px;
+    height: 40px;
+    font-size: 10px;
+  }
+
+  .contentxyz{
+    grid-template-columns: repeat(6, 40px); /* 6 equal boxes */
+    gap: 8px; /* spacing between inputs */
+  }
+
 }
 
 .profilesections{

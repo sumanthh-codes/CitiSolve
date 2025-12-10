@@ -12,6 +12,32 @@ const CitiSolveLanding = () => {
   const [detail, setdetail] = useState("citizen");
   const [showloader, setShowloader] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const[otpsent, setOtpSent] = useState(false);
+  const[otp, setOtp] = useState(new Array(6).fill(""));
+  const [fotp,setfotp] = useState("");
+  const [login,setlogin] = useState(false);
+  const [email, setemail] = useState("");
+  const [password, setpassword] = useState("");
+
+  const handleotpchange = (e, index) =>{
+    if(isNaN(e.target.value)) return;
+    const newotp = [...otp];
+    newotp[index] = e.target.value;
+    setOtp(newotp);
+    if (e.target.nextSibling && e.target.value !== "") {
+    e.target.nextSibling.focus();
+    }
+  }
+  const handlekeydown = (e,i) =>{
+    if(e.key === "Backspace"){
+      if(otp[i] === ""){
+        if(i===0) return;
+        e.preventDefault();
+        const prev = e.target.parentNode.children[i - 1];
+        prev.focus();
+      }
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -44,8 +70,23 @@ const CitiSolveLanding = () => {
     { number: "24/7", label: "Support Available" }
   ];
 
+  const generateotp = async() =>{
+    setOtpSent(true);
+    const d = await fetch("http://localhost:5000/api/auth/generateotp",{
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        email:email
+      })
+    })
+    const res = await d.json();
+    setfotp(res.otp);
+
+  }
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    setOtpSent(false); // Reset first
     setErrorMessage('');
     const formData = new FormData(e.target);
 
@@ -79,23 +120,21 @@ const CitiSolveLanding = () => {
       const res = await fetch(`http://localhost:5000/api/auth/${authMode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        credentials: 'include', // ✅ Important: Include credentials
         body: JSON.stringify(userData),
       });
       
       const data = await res.json();
       
       if (res.ok) {
+        // ❌ Remove: setsessiondata(data.data);
         console.log('✅ Authentication successful:', data);
-        
-        // Navigate based on role
-        if (detail === 'citizen') {
-          navigate('/citizen/home');
-        } else if (detail === 'staff') {
-          navigate('/staff/home');
-        } else if (detail === 'admin') {
-          navigate('/admin/home');
-        }
+        setOtpSent(true);
+        setlogin(true);
+        setemail(formData.get('email'));
+        setpassword(formData.get('password'));
+        generateotp(); // Send OTP
+        setShowloader(false);
       } else {
         console.error('❌ Authentication failed:', data.message);
         setErrorMessage(data.message || 'Authentication failed');
@@ -127,6 +166,57 @@ const CitiSolveLanding = () => {
       return null;
     }
   };
+
+  const handleclose = () => {
+    setShowAuthModal(false);setOtpSent(false)
+  }
+
+  const handleotp = async (e) => {
+    e.preventDefault();
+    const enteredOtp = otp.join("");
+    console.log("Entered OTP:", enteredOtp);
+    
+    if(enteredOtp === fotp){
+        try {
+            if(authMode==='signup'){
+              const create = await fetch("http://localhost:5000/api/auth/createuser", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // ✅ Important: Include credentials
+                body: JSON.stringify({password})
+              })
+            }
+            // ✅ Just call setsession - user data is already in server session
+            const d = await fetch("http://localhost:5000/api/auth/setsession", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // ✅ Important: Include credentials
+                // ❌ No body needed - data is in server session
+            });
+
+            const response = await d.json();
+
+            if (d.ok) {
+                console.log("✅ Session activated:", response);
+                // Navigate based on role
+                if (detail === 'citizen') {
+                    navigate('/citizen/home');
+                } else if (detail === 'staff') {
+                    navigate('/staff/home');
+                } else if (detail === 'admin') {
+                    navigate('/admin/home');
+                }
+            } else {
+                alert(response.message || "Session setup failed. Please login again.");
+            }
+        } catch (error) {
+            console.error("❌ Session setup failed:", error);
+            alert("Session setup failed. Please try again.");
+        }
+    } else {
+        alert("Invalid OTP. Please try again.");
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -201,7 +291,7 @@ const CitiSolveLanding = () => {
       {showAuthModal && (
         <div className={styles.modalOverlay} onClick={() => setShowAuthModal(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.closeBtn} onClick={() => setShowAuthModal(false)}>×</button>
+            <button className={styles.closeBtn} onClick={() => handleclose()}>×</button>
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>Welcome to CitiSolve</h2>
               <div className={styles.tabContainer}>
@@ -248,23 +338,23 @@ const CitiSolveLanding = () => {
               {authMode === 'signup' && (
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Full Name</label>
-                  <input type="text" name='fullname' className={styles.input} placeholder="Enter your name" required />
+                  <input type="text" name='fullname' className={styles.input} placeholder="Enter your name" disabled={otpsent} required />
                 </div>
               )}
               <div className={styles.formGroup}>
                 <label className={styles.label}>Email</label>
-                <input type="email" name='email' className={styles.input} placeholder="Enter your email" required />
+                <input type="email" name='email' className={styles.input} disabled={otpsent} placeholder="Enter your email" required />
               </div>
               {authMode === 'signup' && detail === 'citizen' && (
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Ward/Zone</label>
-                  <input type="text" name='ward' className={styles.input} placeholder="Enter your ward" required />
+                  <input type="text" name='ward' className={styles.input} disabled={otpsent} placeholder="Enter your ward" required />
                 </div>
               )}
               {authMode === 'signup' && detail === 'staff' && (
                 <div className={styles.formgroup}>
                   <label htmlFor="complaint-category">Category *</label>
-                  <select id="complaint-category" name="category" required>
+                  <select id="complaint-category" name="category" disabled={otpsent} required>
                     <option value="">Select a category</option>
                     <option value="roads">🛣️ Roads & Infrastructure</option>
                     <option value="water">💧 Water Supply</option>
@@ -277,7 +367,7 @@ const CitiSolveLanding = () => {
               )}
               <div className={styles.formGroup}>
                 <label className={styles.label}>Password</label>
-                <input type="password" name='password' className={styles.input} placeholder="Enter your password" required />
+                <input type="password" name='password' disabled={otpsent} className={styles.input} placeholder="Enter your password" required />
               </div>
 
               {errorMessage && (
@@ -285,14 +375,49 @@ const CitiSolveLanding = () => {
                   {errorMessage}
                 </div>
               )}
-
+              {otpsent &&(
+                <>
+                  <span className = {styles.otpname}>Enter otp</span>
+                  <label className={styles.contentxyz}>
+                    {
+                      otp.map((data, i)=>(
+                        <input type="text" key = {i} 
+                          value = {data} onChange={(e)=>handleotpchange(e,i)}
+                          onKeyDown={(e)=>handlekeydown(e,i)}
+                          maxLength="1" name="otp" required
+                        />
+                      ))
+                    }
+                  </label>
+                </>
+              )}
+              {!otpsent&&(
               <button type="submit" className={styles.submitBtn} disabled={showloader}>
+                {showloader ? (
+                  <div style={loaderStyles}></div>
+                ) : (
+                  "Get OTP✉️"
+                )}
+              </button>
+              )}
+              {otpsent&&login&&(
+              <>
+              <button type="button" onClick = {handleotp} className={styles.submitBtn} disabled={showloader}>
                 {showloader ? (
                   <div style={loaderStyles}></div>
                 ) : (
                   authMode === 'login' ? 'Login 🚀' : 'Create Account 🚀'
                 )}
               </button>
+              <button type="button" className={styles.submitBtn} onClick={()=>generateotp()} disabled={showloader}>
+                {showloader ? (
+                  <div style={loaderStyles}></div>
+                ) : (
+                  "Resend OTP✉️"
+                )}
+              </button>
+              </>)
+              }
             </form>
           </div>
         </div>
