@@ -140,7 +140,7 @@ const DashboardPage = () => {
 
   return (
     <div className={styles.contentArea}>
-      <a className = {styles.allocationbtn} onClick={()=>navigate("/admin/allocation")}>📑Allocate complaints</a>
+      <a className = {styles.allocationbtn} onClick={()=>navigate("/admin/allocate")}>📑Allocate complaints</a>
       {renderStats()}
       <div className={styles.dashboardGrid}>
         <div className={styles.dashboardSection}>

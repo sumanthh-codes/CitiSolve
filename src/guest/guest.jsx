@@ -214,7 +214,7 @@ const CitiSolveLanding = () => {
             alert("Session setup failed. Please try again.");
         }
     } else {
-        alert("Invalid OTP. Please try again.");
+      setErrorMessage("Invalid OTP. Please try again.");
     }
   }
 
@@ -409,7 +409,7 @@ const CitiSolveLanding = () => {
                   authMode === 'login' ? 'Login 🚀' : 'Create Account 🚀'
                 )}
               </button>
-              <button type="button" className={styles.submitBtn} onClick={()=>generateotp()} disabled={showloader}>
+              <button type="button" className={styles.submitBtnz} onClick={()=>generateotp()} disabled={showloader}>
                 {showloader ? (
                   <div style={loaderStyles}></div>
                 ) : (
