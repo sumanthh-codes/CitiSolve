@@ -40,8 +40,8 @@ const CitizenPortal = () => {
 
         if (res.ok) {
           const data = await res.json();
-          console.log("✅ User data fetched:", data.user);
-          setUser(data.user);
+          console.log("✅ User data fetched:", data);
+          setUser(data);
         } else {
           console.log("❌ User not authenticated");
           navigate('/');
@@ -65,7 +65,7 @@ const CitizenPortal = () => {
       setComplaintsLoading(true);
       try {
         console.log("📊 Fetching complaints data...");
-        const res = await fetch('http://localhost:5000/api/auth/complaints/data', {
+        const res = await fetch('http://localhost:5000/api/auth/citizen/complaints/data', {
           credentials: 'include',
         });
 
@@ -356,7 +356,7 @@ const CitizenPortal = () => {
             <p>Email: {user.email}</p>
             <p>Ward: {user.ward}</p>
             <p style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #eee" }}>
-              <a href="#">Settings</a> | <a href="#" onClick={handleLogout}>Logout</a>
+              <div className = {styles.logout} onClick={handleLogout}>Logout</div>
             </p>
           </div>
         </div>
