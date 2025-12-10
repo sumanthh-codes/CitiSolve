@@ -7,6 +7,7 @@ import DepartmentsPage from './admindepartments';
 import StaffPage from './adminstaff';
 import styles from './adminlayout.module.css';
 import { useNavigate } from 'react-router-dom';
+import AllocationPage from './adminallocation';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -25,8 +26,8 @@ const AdminLayout = () => {
 
         if (res.ok) {
           const data = await res.json();
-          console.log("✅ User data fetched:", data.user);
-          setUser(data.user);
+          console.log("✅ User data fetched:", data);
+          setUser(data);
         } else {
           console.log("❌ User not authenticated");
           navigate('/');
@@ -67,6 +68,9 @@ const AdminLayout = () => {
     } else if (path === '/admin/home' || path === '/admin/') {
       title = 'Dashboard';
     }
+    else if(path==='/admin/allocate'){
+      title = 'Complaint allocation';
+    }
     setPageTitle(title);
   }, [location.pathname]);
 
@@ -77,7 +81,6 @@ const AdminLayout = () => {
   const handleLogout = async () => {
     try {
       const res = await fetch('http://localhost:5000/api/auth/logout', {
-        method: 'POST',
         credentials: 'include',
       });
       
@@ -116,6 +119,9 @@ const AdminLayout = () => {
         <nav className={styles.sidebarNav}>
           <NavLink to="/admin/home" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>📊</span><span className={styles.navText}>Dashboard</span>
+          </NavLink>
+          <NavLink to="/admin/allocate" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
+            <span className={styles.navIcon}>📑</span><span className={styles.navText}>Complaint Allocation</span>
           </NavLink>
           <NavLink to="/admin/complaints" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`} onClick={() => window.innerWidth <= 768 && setIsSidebarCollapsed(false)}>
             <span className={styles.navIcon}>📋</span><span className={styles.navText}>Complaints</span>
@@ -171,6 +177,7 @@ const AdminLayout = () => {
           <Route path="/users" element={<UsersPage />}/>
           <Route path="/departments" element={<DepartmentsPage />}/>
           <Route path="/staff" element={<StaffPage />}/>
+          <Route path = "/allocate" element={<AllocationPage />}/>
         </Routes>
       </div>
     </div>

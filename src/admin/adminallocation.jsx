@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import styles from './admincomplaintsstyles.module.css';
 
-const ComplaintsPage = () => {
+const AllocationPage = () => {
   const [complaints, setComplaints] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -11,31 +12,39 @@ const ComplaintsPage = () => {
     priority: 'all',
   });
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showImageViewer, setShowImageViewer] = useState(false);
-
-  const [editForm, setEditForm] = useState({
-    title: '',
-    description: '',
-    status: '',
-    priority: '',
-  });
+  const [selectedStaffId, setSelectedStaffId] = useState('');
 
   useEffect(() => {
-    const fetchInitialComplaints = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:5000/api/auth/admin/complaints',{
-          credentials:'include'
-        })
-        const data = await res.json();
-        if (res.ok) {
-          setComplaints(data.complaints || []);
-          console.log('Fetched complaints:', data.complaints);
+        // Fetch complaints
+        const complaintsRes = await fetch('http://localhost:5000/api/auth/admin/complaintsallocation', {
+          credentials: 'include'
+        });
+        const complaintsData = await complaintsRes.json();
+        
+        if (complaintsRes.ok) {
+          setComplaints(complaintsData.complaints || []);
         } else {
-          console.error('Failed to fetch complaints:', data.error);
+          console.error('Failed to fetch complaints:', complaintsData.error);
           setComplaints([]);
+        }
+
+        // Fetch staff members
+        const staffRes = await fetch('http://localhost:5000/api/auth/admin/staff', {
+          credentials: 'include'
+        });
+        const staffData = await staffRes.json();
+        
+        if (staffRes.ok) {
+          setStaff(staffData.staff || []);
+        } else {
+          console.error('Failed to fetch staff:', staffData.error);
+          setStaff([]);
         }
       } catch (error) {
         console.error('Error in initial fetch:', error);
@@ -43,7 +52,7 @@ const ComplaintsPage = () => {
         setLoading(false);
       }
     };
-    fetchInitialComplaints();
+    fetchInitialData();
   }, []);
 
   const handleFilterChange = (e) => {
@@ -55,7 +64,6 @@ const ComplaintsPage = () => {
     setSearchTerm(e.target.value);
   };
 
-  // Enhanced search function that searches through ALL fields
   const getFilteredComplaints = () => {
     return complaints.filter((c) => {
       const statusMatch = filters.status === 'all' || c.status === filters.status;
@@ -68,7 +76,6 @@ const ComplaintsPage = () => {
 
       const searchLower = searchTerm.toLowerCase();
       
-      // Convert all complaint fields to searchable strings
       const searchableFields = [
         c.id?.toString(),
         c.user_id?.toString(),
@@ -80,12 +87,8 @@ const ComplaintsPage = () => {
         c.priority?.toString(),
         c.status?.toString(),
         c.created_at ? new Date(c.created_at).toLocaleString() : '',
-        c.resolved_on ? new Date(c.resolved_on).toLocaleString() : '',
-        c.resolvedby_name?.toString(),
-        c.resolvedby_id?.toString(),
       ];
 
-      // Check if search term exists in any field
       const searchMatch = searchableFields.some(field => 
         field && field.toLowerCase().includes(searchLower)
       );
@@ -94,7 +97,6 @@ const ComplaintsPage = () => {
     });
   };
 
-  // CSV Export Function
   const handleExportCSV = () => {
     const filteredComplaints = getFilteredComplaints();
     
@@ -103,7 +105,6 @@ const ComplaintsPage = () => {
       return;
     }
 
-    // Define CSV headers
     const headers = [
       'ID',
       'User ID',
@@ -115,19 +116,13 @@ const ComplaintsPage = () => {
       'Priority',
       'Status',
       'Created At',
-      'Resolved On',
-      'Resolved By Name',
-      'Resolved By ID',
       'Image URL'
     ];
 
-    // Convert complaints to CSV rows
     const csvRows = [
-      headers.join(','), // Header row
+      headers.join(','),
       ...filteredComplaints.map(c => {
-        // Correctly format the date-time strings and escape quotes for all fields
         const formattedCreatedAt = c.created_at ? `"${new Date(c.created_at).toLocaleString().replace(/"/g, '""')}"` : '""';
-        const formattedResolvedOn = c.resolved_on ? `"${new Date(c.resolved_on).toLocaleString().replace(/"/g, '""')}"` : '""';
 
         const row = [
           `"${c.id || ''}"`,
@@ -140,19 +135,13 @@ const ComplaintsPage = () => {
           `"${c.priority || ''}"`,
           `"${c.status || ''}"`,
           formattedCreatedAt,
-          formattedResolvedOn,
-          `"${c.resolvedby_name || ''}"`,
-          `"${c.resolvedby_id || ''}"`,
           `"${c.imageurl || ''}"`
         ];
         return row.join(',');
       })
     ];
 
-    // Create CSV content
     const csvContent = csvRows.join('\n');
-
-    // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -173,90 +162,72 @@ const ComplaintsPage = () => {
     setShowDetailModal(true);
   };
 
-  const handleEditClick = (complaint) => {
+  const getMatchingStaff = (complaint) => {
+    // Filter staff members by matching department (category)
+    return staff.filter(s => s.department === complaint.category);
+  };
+
+  const handleAllocateClick = (complaint) => {
     if (complaint.status === 'resolved') {
-      alert('Cannot edit a resolved complaint');
+      alert('Cannot allocate a resolved complaint');
+      return;
+    }
+
+    const matchingStaff = getMatchingStaff(complaint);
+    if (matchingStaff.length === 0) {
+      alert(`No staff members available for ${complaint.category} department`);
       return;
     }
 
     setSelectedComplaint(complaint);
-    setEditForm({
-      title: complaint.title || '',
-      description: complaint.description || '',
-      status: complaint.status || '',
-      priority: complaint.priority || '',
-    });
-    setShowEditModal(true);
+    setSelectedStaffId('');
+    setShowAllocationModal(true);
   };
 
-  const handleDeleteClick = async(complaint) => {
-    if (window.confirm(`Are you sure you want to delete complaint #${complaint.id}?`)) {
-      console.log('Delete complaint:', complaint.id);
-      try {
-        const res = await fetch(`http://localhost:5000/api/auth/complaints/delete`, { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: complaint.id }),    
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setComplaints(complaints.filter((c) => c.id !== complaint.id));
-          alert('Complaint deleted successfully');
-        } else {
-          alert('Failed to delete complaint: ' + (data.error || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Error deleting complaint:', error);
-        alert('Error deleting complaint');
-      }
+  const handleRandomAllocation = () => {
+    const matchingStaff = getMatchingStaff(selectedComplaint);
+    if (matchingStaff.length === 0) {
+      alert('No staff members available for this department');
+      return;
     }
+    const randomStaff = matchingStaff[Math.floor(Math.random() * matchingStaff.length)];
+    setSelectedStaffId(randomStaff.id);
   };
 
-  const onTitleChange = (e) => {
-    setEditForm((prev) => ({ ...prev, title: e.target.value }));
-  };
+  const handleAllocationSubmit = async () => {
+    if (!selectedStaffId) {
+      alert('Please select a staff member');
+      return;
+    }
 
-  const onDescriptionChange = (e) => {
-    setEditForm((prev) => ({ ...prev, description: e.target.value }));
-  };
-
-  const onStatusChange = (e) => {
-    setEditForm((prev) => ({ ...prev, status: e.target.value }));
-  };
-
-  const onPriorityChange = (e) => {
-    setEditForm((prev) => ({ ...prev, priority: e.target.value }));
-  };
-
-  const handleEditSubmit = async() => {
-    console.log('Submitting edit for complaint:', selectedComplaint.id);
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/admin/complaints/edit`, {
+      const res = await fetch('http://localhost:5000/api/auth/admin/complaints/allocate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({editForm:editForm,  id: selectedComplaint.id}),
+        body: JSON.stringify({
+          complaintId: selectedComplaint.id,
+          staffId: selectedStaffId
+        }),
         credentials: 'include',
       });
+      
       const data = await res.json();
+      
       if (!res.ok) {
-        alert('Failed to update complaint: ' + (data.error || 'Unknown error'));
+        alert('Failed to allocate complaint: ' + (data.error || 'Unknown error'));
         return;
       }
 
+      // Update complaint status in local state
       setComplaints(
-        complaints.map((c) =>
-          c.id === selectedComplaint.id
-            ? { ...c, ...editForm }
-            : c
-        )
+        complaints.filter((u) => u.id !== selectedComplaint.id)
       );
 
-      setShowEditModal(false);
-      alert('Complaint updated successfully');
+      setShowAllocationModal(false);
+      alert('Complaint allocated successfully');
     } catch (error) {
-      console.error('Error updating complaint:', error);
-      alert('Error updating complaint');
+      console.error('Error allocating complaint:', error);
+      alert('Error allocating complaint');
     }
   };
 
@@ -329,19 +300,20 @@ const ComplaintsPage = () => {
         <td data-label="Priority">{getPriorityBadge(c.priority)}</td>
         <td data-label="Status">{getStatusBadge(c.status)}</td>
         <td data-label="Actions" className={styles.actionCell}>
-          <button className={`${styles.actionBtn} ${styles.view}`} title="View Details" onClick={() => handleViewDetails(c)}>
+          <button 
+            className={`${styles.actionBtn} ${styles.view}`} 
+            title="View Details" 
+            onClick={() => handleViewDetails(c)}
+          >
             👁️
           </button>
           <button
             className={`${styles.actionBtn} ${styles.edit}`}
-            title={c.status === 'resolved' ? 'Cannot edit resolved complaint' : 'Edit'}
-            onClick={() => handleEditClick(c)}
+            title={c.status === 'resolved' ? 'Cannot allocate resolved complaint' : 'Allocate'}
+            onClick={() => handleAllocateClick(c)}
             disabled={c.status === 'resolved'}
           >
-            ✏️
-          </button>
-          <button className={`${styles.actionBtn} ${styles.delete}`} title="Delete" onClick={() => handleDeleteClick(c)}>
-            🗑️
+            Allocate
           </button>
         </td>
       </tr>
@@ -351,9 +323,11 @@ const ComplaintsPage = () => {
   return (
     <div className={styles.contentArea}>
       <div className={styles.pageHeader}>
-        <h2>All Complaints</h2>
+        <h2>Complaint Allocation</h2>
         <div className={styles.pageActions}>
-          <button className={styles.btnPrimary} onClick={handleExportCSV}>📥 Export CSV</button>
+          <button className={styles.btnPrimary} onClick={handleExportCSV}>
+            📥 Export CSV
+          </button>
           <button
             className={styles.btnSecondary}
             onClick={() => {
@@ -369,7 +343,12 @@ const ComplaintsPage = () => {
       <div className={styles.filterSection}>
         <div className={styles.filterGroup}>
           <label>Status:</label>
-          <select name="status" className={styles.filterSelect} value={filters.status} onChange={handleFilterChange}>
+          <select 
+            name="status" 
+            className={styles.filterSelect} 
+            value={filters.status} 
+            onChange={handleFilterChange}
+          >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="progress">In Progress</option>
@@ -378,7 +357,12 @@ const ComplaintsPage = () => {
         </div>
         <div className={styles.filterGroup}>
           <label>Category:</label>
-          <select name="category" className={styles.filterSelect} value={filters.category} onChange={handleFilterChange}>
+          <select 
+            name="category" 
+            className={styles.filterSelect} 
+            value={filters.category} 
+            onChange={handleFilterChange}
+          >
             <option value="all">All Categories</option>
             <option value="roads">Roads</option>
             <option value="water">Water</option>
@@ -389,7 +373,12 @@ const ComplaintsPage = () => {
         </div>
         <div className={styles.filterGroup}>
           <label>Priority:</label>
-          <select name="priority" className={styles.filterSelect} value={filters.priority} onChange={handleFilterChange}>
+          <select 
+            name="priority" 
+            className={styles.filterSelect} 
+            value={filters.priority} 
+            onChange={handleFilterChange}
+          >
             <option value="all">All Priority</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
@@ -474,16 +463,6 @@ const ComplaintsPage = () => {
                   <strong>Created At:</strong>
                   <span>{new Date(selectedComplaint.created_at).toLocaleString()}</span>
                 </div>
-                <div className={`${styles.detailItem} ${styles.fullWidth}`}>
-                  <strong>Resolved On:</strong>
-                  <span>{selectedComplaint.resolved_on ? new Date(selectedComplaint.resolved_on).toLocaleString() : 'N/A'}</span>
-                </div>
-                <div className={`${styles.detailItem} ${styles.fullWidth}`}>
-                  <strong>Resolved By:</strong>
-                  <span>
-                    {selectedComplaint.resolvedby_name || 'N/A'} {selectedComplaint.resolvedby_id ? `(ID: ${selectedComplaint.resolvedby_id})` : ''}
-                  </span>
-                </div>
                 <div className={`${styles.detailItem} ${styles.fullWidth} ${styles.description}`}>
                   <strong>Description:</strong>
                   <p>{selectedComplaint.description || 'N/A'}</p>
@@ -491,7 +470,12 @@ const ComplaintsPage = () => {
                 {selectedComplaint.imageurl && (
                   <div className={`${styles.detailItem} ${styles.fullWidth} ${styles.imageContainer}`}>
                     <strong>Image:</strong>
-                    <img src={selectedComplaint.imageurl} alt="Complaint" onClick={handleImageClick} />
+                    <img 
+                      src={selectedComplaint.imageurl} 
+                      alt="Complaint" 
+                      onClick={handleImageClick} 
+                      style={{ cursor: 'pointer' }}
+                    />
                   </div>
                 )}
               </div>
@@ -500,43 +484,60 @@ const ComplaintsPage = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && selectedComplaint && (
-        <div className={styles.modalBackdrop} onClick={() => setShowEditModal(false)}>
+      {/* Allocation Modal */}
+      {showAllocationModal && selectedComplaint && (
+        <div className={styles.modalBackdrop} onClick={() => setShowAllocationModal(false)}>
           <div className={`${styles.modalContent} ${styles.editModal}`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>Edit Complaint #{selectedComplaint.id}</h3>
-              <button className={styles.closeBtn} onClick={() => setShowEditModal(false)}>
+              <h3>Allocate Complaint #{selectedComplaint.id}</h3>
+              <button className={styles.closeBtn} onClick={() => setShowAllocationModal(false)}>
                 ×
               </button>
             </div>
             <div className={styles.modalBody}>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label htmlFor="editStatus">Status</label>
-                  <select id="editStatus" className={styles.formSelect} value={editForm.status} onChange={onStatusChange}>
-                    <option value="pending">Pending</option>
-                    <option value="progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
+                  <label htmlFor="staffSelect">Select Staff Member ({selectedComplaint.category} department)</label>
+                  <select
+                    id="staffSelect"
+                    className={styles.filterSelect}
+                    value={selectedStaffId}
+                    onChange={(e) => setSelectedStaffId(e.target.value)}
+                  >
+                    <option value="">-- Select Staff --</option>
+                    {getMatchingStaff(selectedComplaint).map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.email})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="editPriority">Priority</label>
-                  <select id="editPriority" className={styles.formSelect} value={editForm.priority} onChange={onPriorityChange}>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
+                  <label>&nbsp;</label>
+                  <button 
+                    className={styles.btnSecondary} 
+                    onClick={handleRandomAllocation}
+                    type="button"
+                  >
+                    Assign Randomly 🔀
+                  </button>
                 </div>
               </div>
 
               <div className={styles.modalActions}>
-                <button className={styles.btnSecondary} onClick={() => setShowEditModal(false)}>
+                <button 
+                  className={styles.btnSecondary} 
+                  onClick={() => setShowAllocationModal(false)}
+                >
                   Cancel
                 </button>
-                <button type="submit" className={styles.btnPrimary} onClick={handleEditSubmit}>
-                  Save Changes
+                <button 
+                  type="button" 
+                  className={styles.btnPrimary} 
+                  onClick={handleAllocationSubmit}
+                >
+                  Assign
                 </button>
               </div>
             </div>
@@ -550,11 +551,15 @@ const ComplaintsPage = () => {
           <button className={styles.closeImageViewer} onClick={() => setShowImageViewer(false)}>
             ×
           </button>
-          <img src={selectedComplaint.imageurl} alt="Complaint Full Screen" onClick={(e) => e.stopPropagation()} />
+          <img 
+            src={selectedComplaint.imageurl} 
+            alt="Complaint Full Screen" 
+            onClick={(e) => e.stopPropagation()} 
+          />
         </div>
       )}
     </div>
   );
 };
 
-export default ComplaintsPage;
+export default AllocationPage;

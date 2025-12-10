@@ -26,7 +26,9 @@ const UsersPage = () => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:5000/api/auth/admin/complaints');
+        const res = await fetch('http://localhost:5000/api/auth/admin/complaints',{
+          credentials:'include'
+        });
         const data = await res.json();
         if (res.ok) {
           setUsersData(data.users || []);

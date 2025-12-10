@@ -18,8 +18,8 @@ const DashboardPage = () => {
 
         if (res.ok) {
           const data = await res.json();
-          console.log("✅ User data fetched:", data.user);
-          setUser(data.user);
+          console.log("✅ User data fetched:", data);
+          setUser(data);
         } else {
           console.log("❌ User not authenticated");
           navigate('/');
@@ -38,7 +38,9 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchstats = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/admin/complaints');
+        const res = await fetch('http://localhost:5000/api/auth/admin/complaints',{
+          credentials: 'include'
+        });
 
         if (res.ok) {
           const data = await res.json();
@@ -138,6 +140,7 @@ const DashboardPage = () => {
 
   return (
     <div className={styles.contentArea}>
+      <a className = {styles.allocationbtn} onClick={()=>navigate("/admin/allocation")}>📑Allocate complaints</a>
       {renderStats()}
       <div className={styles.dashboardGrid}>
         <div className={styles.dashboardSection}>
